@@ -15,7 +15,7 @@
 #define LSM9DS1_M	0x1E // Would be 0x1C if SDO_M is LOW
 #define LSM9DS1_AG	0x6B // Would be 0x6A if SDO_AG is LOW
 
-#define DECLINATION -8.58
+#define DECLINATION 16.99389  //The magnetic declination here in Saguenay, Canada
 
 BLEPeripheral blePeripheral; // create peripheral instance
 BLEService ledService("00000d00-0000-1000-8000-00805f9b34fb"); // create service

@@ -2,6 +2,7 @@
 #include <SD.h>
 
 #include <SparkFunLSM9DS1.h>
+#include <MadgwickAHRS.h>
 
 #include "Command.h"
 #include "FileLogger.h"
@@ -43,6 +44,7 @@ char* b = bufferTemp;
 int counter = 0;
 
 LSM9DS1 imu;
+Madgwick filter;
 
 void setup() {
 	Serial.begin(115200);
@@ -85,6 +87,8 @@ void setup() {
 	imu.settings.gyro.flipY = false; // Don't flip Y
 	imu.settings.gyro.flipZ = false; // Don't flip Z
 
+	filter.begin(FREQUENCY);
+
 	if (!imu.begin())
 	{
 		Serial.println("Failed to communicate with LSM9DS1.");
@@ -96,6 +100,9 @@ void setup() {
 		while (1)
 			;
 	}
+
+	imu.calibrate();
+	imu.calibrateMag();
 
 	Serial.println("Found and configured LSM9DS1 9DOF");
 
@@ -149,25 +156,19 @@ void loop() {
 			return;
 		}
 
-		float roll = atan2(imu.ay, imu.az);
-		float pitch = atan2(-imu.ax, sqrt(imu.ay * imu.ay + imu.az * imu.az));
-
+		float roll;
+		float pitch;
 		float heading;
-		if (imu.my == 0)
-			heading = (imu.mx < 0) ? PI : 0;
-		else
-			heading = atan2(imu.mx, my);
 
-		heading -= DECLINATION * PI / 180;
-
-		if (heading > PI) heading -= (2 * PI);
-		else if (heading < -PI) heading += (2 * PI);
-		else if (heading < 0) heading += 2 * PI;
-
-		// Convert everything from radians to degrees:
-		heading *= 180.0 / PI;
-		pitch *= 180.0 / PI;
-		roll *= 180.0 / PI;
+		filter.update(imu.calcGyro(imu.gx),
+			imu.calcGyro(imu.gy),
+			imu.calcGyro(imu.gz),
+			imu.calcAccel(imu.ax),
+			imu.calcAccel(imu.ay),
+			imu.calcAccel(imu.az),
+			imu.calcMag(imu.mx),
+			imu.calcMag(imu.my),
+			imu.calcMag(imu.mz));
 
 		buffer[currentValue++] = millis();
 		buffer[currentValue++] = imu.calcAccel(imu.ax);
@@ -179,9 +180,9 @@ void loop() {
 		buffer[currentValue++] = imu.calcMag(imu.mx);
 		buffer[currentValue++] = imu.calcMag(imu.my);
 		buffer[currentValue++] = imu.calcMag(imu.mz);
-		buffer[currentValue++] = heading;
-		buffer[currentValue++] = pitch;
-		buffer[currentValue++] = roll;
+		buffer[currentValue++] = filter.getYaw();
+		buffer[currentValue++] = filter.getPitch();
+		buffer[currentValue++] = filter.getRoll();
 
 		counter++;
 

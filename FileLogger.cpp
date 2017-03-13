@@ -21,7 +21,7 @@ void FileLoggerClass::init(uint8_t chipSelect,const char* metadatFile, const cha
 		}
 		if (!SD.exists(imuFile)) {
 			dataFile = SD.open(imuFile, FILE_WRITE);
-			dataFile.println("time,acc_x,acc_y,acc_z,gyr_x,gyr_y,gyr_z,mag_x,mag_y,mag_z,heading,pitch,roll,floor,people,sensor_location");
+			dataFile.println("time,acc_x,acc_y,acc_z,gyr_x,gyr_y,gyr_z,mag_x,mag_y,mag_z,floor,people,sensor_location");
 			dataFile.flush();
 			dataFile.close();
 		}

@@ -2,14 +2,13 @@
 #include <SD.h>
 
 #include <SparkFunLSM9DS1.h>
-#include <MadgwickAHRS.h>
 
 #include "Command.h"
 #include "FileLogger.h"
 
 #include <CurieBLE.h>
 
-#define DATA_NUMBER 13
+#define DATA_NUMBER 10
 #define FREQUENCY 60
 #define BUFFER_SIZE 10 * DATA_NUMBER
 
@@ -44,7 +43,6 @@ char* b = bufferTemp;
 int counter = 0;
 
 LSM9DS1 imu;
-Madgwick filter;
 
 void setup() {
 	Serial.begin(115200);
@@ -87,8 +85,6 @@ void setup() {
 	imu.settings.gyro.flipY = false; // Don't flip Y
 	imu.settings.gyro.flipZ = false; // Don't flip Z
 
-	filter.begin(FREQUENCY);
-
 	if (!imu.begin())
 	{
 		Serial.println("Failed to communicate with LSM9DS1.");
@@ -101,8 +97,8 @@ void setup() {
 			;
 	}
 
-	imu.calibrate();
-	imu.calibrateMag();
+	//imu.calibrate();
+	//imu.calibrateMag();
 
 	Serial.println("Found and configured LSM9DS1 9DOF");
 
@@ -160,16 +156,6 @@ void loop() {
 		float pitch;
 		float heading;
 
-		filter.update(imu.calcGyro(imu.gx),
-			imu.calcGyro(imu.gy),
-			imu.calcGyro(imu.gz),
-			imu.calcAccel(imu.ax),
-			imu.calcAccel(imu.ay),
-			imu.calcAccel(imu.az),
-			imu.calcMag(imu.mx),
-			imu.calcMag(imu.my),
-			imu.calcMag(imu.mz));
-
 		buffer[currentValue++] = millis();
 		buffer[currentValue++] = imu.calcAccel(imu.ax);
 		buffer[currentValue++] = imu.calcAccel(imu.ay);
@@ -180,20 +166,16 @@ void loop() {
 		buffer[currentValue++] = imu.calcMag(imu.mx);
 		buffer[currentValue++] = imu.calcMag(imu.my);
 		buffer[currentValue++] = imu.calcMag(imu.mz);
-		buffer[currentValue++] = filter.getYaw();
-		buffer[currentValue++] = filter.getPitch();
-		buffer[currentValue++] = filter.getRoll();
 
 		counter++;
 
 		if (currentValue >= BUFFER_SIZE) {
 			currentValue = 0;
 			for (int i = 0; i < BUFFER_SIZE - DATA_NUMBER;i+= DATA_NUMBER) {
-				b += sprintf(b, "%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%s,%s,%s\n", String(buffer[i]).c_str(), 
+				b += sprintf(b, "%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%s,%s,%s\n", String(buffer[i]).c_str(), 
 					buffer[i+1], buffer[i + 2], buffer[i + 3],
 					buffer[i + 4], buffer[i + 5], buffer[i + 6],
 					buffer[i + 7], buffer[i + 8], buffer[i + 9],
-					buffer[i + 10], buffer[i + 11], buffer[i + 12],
 					CommandClass::Instance()->HikingName().c_str(),
 					CommandClass::Instance()->PeopleRecording().c_str(),
 					CommandClass::Instance()->SensorLocation().c_str());
